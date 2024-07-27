@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SRS</title>
+    <meta charset="utf-8">
+    <style>
+        body{
+            padding-top: 30px;
+        }
+    </style>
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css"/>
+    <script type="text/javascript" src="js/jquery-1.12.2.min.js"></script>
+    <script type="text/javascript" src="js/adapter-7.4.0.min.js"></script>
+    <script type="text/javascript" src="js/srs.sdk.js"></script>
+    <script type="text/javascript" src="js/srs.sig.js"></script>
+</head>
+<body>
+<img src='https://ossrs.net/gif/v1/sls.gif?site=ossrs.net&path=/player/room'/>
+<div class="navbar navbar-fixed-top">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="brand" href="https://github.com/ossrs/srs">SRS</a>
+            <div class="nav-collapse collapse">
+                <ul class="nav srs_nav">
+                    <li><a href="one2one.html">One to One</a></li>
+                    <li class="active"><a href="room.html">Video Room</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container">
+    <div class="form-inline">
+        SRS:
+        <input type="text" id="txt_host" class="input-medium" value="">
+        Room:
+        <input type="text" id="txt_room" class="input-small" value="live">
+        UserId:
+        <input type="text" id="txt_userId" class="input-small" value="">
+        <button class="btn btn-primary" id="btn_start">GO</button>
+    </div>
+
+    <div class="row srs_players">
+        <div class="span4 hide" id="publisher">
+            <label></label>
+            <video id="rtc_media_publisher" width="310" autoplay muted controls></video>
+
+            <label></label>
+            <span id='self'></span>
+        </div>
+        <div class="span4 hide" id="player">
+            <label></label>
+            <video id="rtc_media_player" width="310" autoplay muted controls></video>
+
+            <label></label>
+            <span id='peer'></span>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    var sig = null;
+    var publisher = null;
+    var players = {}; // Key is userId, value is a player object.
+    $(function(){
+        console.log('?wss=x to specify the websocket schema, ws or wss');
+        console.log('?wsh=x to specify the websocket server ip');
+        console.log('?wsp=x to specify the websocket server port');
+        console.log('?host=x to specify the SRS server');
+        console.log('?room=x to specify the room to join');
+        console.log('?userId=x to specify your nick name');
+
+        var startDemo = async function () {
+            var host = $('#txt_host').val();
+            var room = $('#txt_room').val();
+            var userId = parseInt($('#txt_userId').val());
+
+            // Connect to signaling first.
+            if (sig) {
+                sig.close();
+            }
+            sig = new SrsRtcSignalingAsync();
+            sig.onmessage = function (msg) {
+                console.log('Notify: ', msg);
+
+                // Subscribe if new user start to publish.
+                if (msg.event === 'publish') {
+                    if (msg.peer && msg.peer.publishing && msg.peer.userId !== userId) {
+                        startPlay(host, room, msg.peer);
+                    }
+                }
+
+                // Remove dead players.
+                if (msg.event === 'join' || msg.event === 'leave') {
+                    $.each(players, function(k, obj) {
+                        let stillAlive = false;
+                        msg.participants.forEach(function (participant) {
+                            if (parseInt(participant.userId) === parseInt(k)) stillAlive = true;
+                        });
+
+                        if (!stillAlive) {
+                            obj.player.close();
+                            obj.ui.remove();
+                        }
+                    });
+                }
+            };
+            await sig.connect(conf.wsSchema, conf.wsHost, room, userId);
+
+            let r0 = await sig.send({action:'join', room:room, userId:userId});
+            console.log('Signaling: join ok', r0);
+
+            // Start publish media if signaling is ok.
+            await startPublish(host, room, userId);
+            let r1 = await sig.send({action:'publish', room:room, userId:userId});
+            console.log('Signaling: publish ok', r1);
+
+            // Play the stream already in room.
+            r0.participants.forEach(function(participant) {
+                if (participant.userId === userId || !participant.publishing) return;
+                startPlay(host, room, participant);
+            });
+        };
+
+        var startPublish = function (host, room, userId) {
+
+            $(".ff_first").each(function(i,e) {
+                $(e).text(userId);
+            });
+
+            var url = 'webrtc://' + host + '/' + room + '/' + userId + conf.query;
+            $('#rtc_media_publisher').show();
+            $('#publisher').show();
+
+            if (publisher) {
+                publisher.close();
+            }
+            publisher = new SrsRtcPublisherAsync();
+            $('#rtc_media_publisher').prop('srcObject', publisher.stream);
+
+            return publisher.publish(url).then(function(session){
+
+                // const html = '<br>' +
+                //     'userId: ' + peer.userId + '<br>' +
+                //     'firstName: ' + peer.firstName + '<br>' +
+                //     'lastName: ' + peer.lastName + '<br>' +
+                //     'photo: ' + peer.photo + '<br>' +
+                //     'status: ' + peer.status + '<br>' +
+                //     '<br>'+
+                //     'isCameraOn: ' + peer.isCameraOn + '<br>' +
+                //     'isMicroOn: ' + peer.isMicroOn + '<br>' +
+                //     'batteryLife: ' + peer.batteryLife + '<br>';
+
+                //$('#self').html('<b>Self</b>: ' + url + html);
+                $('#self').html('<b>Self</b>: ' + url);
+            }).catch(function (reason) {
+                publisher.close();
+                $('#rtc_media_publisher').hide();
+                console.error(reason);
+            });
+        };
+
+        var startPlay = function (host, room, peer) {
+            const userId = parseInt(peer.userId);
+
+            $(".ff_second").each(function(i,e) {
+                $(e).text(userId);
+            });
+
+            // Remove exists.
+            if (players[userId]) {
+                players[userId].ui.remove();
+                players[userId].player.close();
+            }
+
+            // Clone a player from template.
+            let ui = $('#player').clone().attr('id', 'player-' + userId);
+            let video = ui.children('#rtc_media_player');
+            console.log(video.length);
+            let player = new SrsRtcPlayerAsync();
+
+            players[userId] = {ui:ui, video:video, player:player};
+            $('.srs_players').append(ui);
+
+            // Start play for this user.
+            var url = 'webrtc://' + host + '/' + room + '/' + userId + conf.query;
+            video.show();
+            ui.show();
+
+            video.prop('srcObject', player.stream);
+
+            player.play(url).then(function(session){
+
+                const html = '<br><br>' +
+                    'userId: ' + peer.userId + '<br>' +
+                    'firstName: ' + peer.firstName + '<br>' +
+                    'lastName: ' + peer.lastName + '<br>' +
+                    'photo: ' + peer.photo + '<br>' +
+                    'status: ' + peer.status + '<br>' +
+                    '<br>'+
+                    'isCameraOn: ' + peer.isCameraOn + '<br>' +
+                    'isMicroOn: ' + peer.isMicroOn + '<br>' +
+                    'batteryLife: ' + peer.batteryLife + '<br>';
+
+                ui.children('#peer').html('Peer: ' + url + html);
+                video.prop('muted', false);
+            }).catch(function (reason) {
+                player.close();
+                video.hide();
+                console.error(reason);
+            });
+        };
+
+        // Pass-by to SRS url.
+        let conf = SrsRtcSignalingParse(window.location);
+        $('#txt_host').val(conf.host);
+        conf.room && $('#txt_room').val(conf.room);
+        $('#txt_userId').val(conf.userId);
+
+        // Update href for all navs.
+        $('ul.srs_nav').children('li').not('.srs_ignore').children('a').each(function (i, e) {
+            $(e).attr('href', $(e).attr('href') + conf.rawQuery);
+        });
+
+        $("#btn_start").click(startDemo);
+        // Never play util windows loaded @see https://github.com/ossrs/srs/issues/2732
+        if (conf.autostart) {
+            window.addEventListener("load", function(){ startDemo(); });
+        }
+    });
+</script>

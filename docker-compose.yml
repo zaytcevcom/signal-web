@@ -1,0 +1,8 @@
+version: "3.9"
+
+services:
+  signal-web:
+    image: zaytcevcom/signal-web:1.0.0
+    ports:
+      - "8888:80"
+    restart: always
