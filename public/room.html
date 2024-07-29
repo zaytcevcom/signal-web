@@ -83,7 +83,7 @@
                 console.log('Notify: ', msg);
 
                 // Subscribe if new user start to publish.
-                if (msg.event === 'publish') {
+                if (msg.event === 'publish' || msg.event === 'changeState') {
                     if (msg.peer && msg.peer.publishing && msg.peer.userId !== userId) {
                         startPlay(host, room, msg.peer);
                     }
@@ -106,7 +106,17 @@
             };
             await sig.connect(conf.wsSchema, conf.wsHost, room, userId);
 
-            let r0 = await sig.send({action:'join', room:room, userId:userId});
+            let r0 = await sig.send({
+                action:'join',
+                room:room,
+                userId:userId,
+                firstName: "Web",
+                lastName: "U" + userId,
+                status: "testing calls",
+                isMicroOn: true,
+                isCameraOn: true,
+                batteryLife: 80
+            });
             console.log('Signaling: join ok', r0);
 
             // Start publish media if signaling is ok.
