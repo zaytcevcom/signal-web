@@ -113,9 +113,10 @@
                 firstName: "Web",
                 lastName: "U" + userId,
                 status: "testing calls",
+                isHorizontal: true,
                 isMicroOn: true,
                 isCameraOn: true,
-                batteryLife: 80
+                batteryLife: 100
             });
             console.log('Signaling: join ok', r0);
 
@@ -200,13 +201,26 @@
 
             player.play(url).then(function(session){
 
+                let photo_html = '';
+
+                if (peer.photo !== null) {
+                    photo_html = '<img src="' + peer.photo + '" style="width: 100px; height: 100px;border-radius: 50%;">';
+                }
+
                 const html = '<br><br>' +
-                    'userId: ' + peer.userId + '<br>' +
-                    'firstName: ' + peer.firstName + '<br>' +
-                    'lastName: ' + peer.lastName + '<br>' +
-                    'photo: ' + peer.photo + '<br>' +
-                    'status: ' + peer.status + '<br>' +
+                    '<table>' +
+                        '<tr>' +
+                            '<td>' + photo_html + '</td>' +
+                            '<td>' +
+                                'userId: ' + peer.userId + '<br>' +
+                                'firstName: ' + peer.firstName + '<br>' +
+                                'lastName: ' + peer.lastName + '<br>' +
+                                'status: ' + peer.status + '<br>' +
+                            '</td>' +
+                        '</tr>' +
+                    '</table>' +
                     '<br>'+
+                    'isHorizontal: ' + peer.isHorizontal + '<br>' +
                     'isCameraOn: ' + peer.isCameraOn + '<br>' +
                     'isMicroOn: ' + peer.isMicroOn + '<br>' +
                     'batteryLife: ' + peer.batteryLife + '<br>';
