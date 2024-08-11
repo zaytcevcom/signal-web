@@ -37,6 +37,8 @@
         <input type="text" id="txt_room" class="input-small" value="live">
         UserId:
         <input type="text" id="txt_userId" class="input-small" value="">
+        Token:
+        <input type="text" id="txt_token" class="input-small" value="">
         <button class="btn btn-primary" id="btn_start">GO</button>
     </div>
 
@@ -73,6 +75,7 @@
             var host = $('#txt_host').val();
             var room = $('#txt_room').val();
             var userId = parseInt($('#txt_userId').val());
+            var token = parseInt($('#txt_token').val());
 
             // Connect to signaling first.
             if (sig) {
@@ -110,12 +113,14 @@
                 action:'join',
                 room:room,
                 userId:userId,
+                token:token,
                 firstName: "Web",
                 lastName: "U" + userId,
                 status: "testing calls",
                 isHorizontal: true,
                 isMicroOn: true,
-                isCameraOn: true,
+                isSpeakerOn: true,
+                cameraType: "selfie",
                 batteryLife: 100
             });
             console.log('Signaling: join ok', r0);
@@ -149,19 +154,6 @@
             $('#rtc_media_publisher').prop('srcObject', publisher.stream);
 
             return publisher.publish(url).then(function(session){
-
-                // const html = '<br>' +
-                //     'userId: ' + peer.userId + '<br>' +
-                //     'firstName: ' + peer.firstName + '<br>' +
-                //     'lastName: ' + peer.lastName + '<br>' +
-                //     'photo: ' + peer.photo + '<br>' +
-                //     'status: ' + peer.status + '<br>' +
-                //     '<br>'+
-                //     'isCameraOn: ' + peer.isCameraOn + '<br>' +
-                //     'isMicroOn: ' + peer.isMicroOn + '<br>' +
-                //     'batteryLife: ' + peer.batteryLife + '<br>';
-
-                //$('#self').html('<b>Self</b>: ' + url + html);
                 $('#self').html('<b>Self</b>: ' + url);
             }).catch(function (reason) {
                 publisher.close();
@@ -221,8 +213,9 @@
                     '</table>' +
                     '<br>'+
                     'isHorizontal: ' + peer.isHorizontal + '<br>' +
-                    'isCameraOn: ' + peer.isCameraOn + '<br>' +
                     'isMicroOn: ' + peer.isMicroOn + '<br>' +
+                    'isSpeakerOn: ' + peer.isSpeakerOn + '<br>' +
+                    'cameraType: ' + peer.cameraType + '<br>' +
                     'batteryLife: ' + peer.batteryLife + '<br>';
 
                 ui.children('#peer').html('Peer: ' + url + html);

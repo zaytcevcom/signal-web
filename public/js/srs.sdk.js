@@ -31,10 +31,17 @@ function SrsRtcPublisherAsync() {
 
     // https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
     self.constraints = {
-        audio: true,
-        video: {
-            width: {ideal: 320, max: 576}
-        }
+        audio: {
+            autoGainControl: false,
+            channelCount: 1,
+            echoCancellation: true,
+            latency: 0,
+            noiseSuppression: true,
+            sampleRate: 44100,
+            sampleSize: 8,
+            volume: 1.0
+        },
+        video: true,
     };
 
     // @see https://github.com/rtcdn/rtcdn-draft
