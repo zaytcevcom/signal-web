@@ -42,6 +42,29 @@
         <button class="btn btn-primary" id="btn_start">GO</button>
     </div>
 
+    <div id="meters">
+        <div id="instant">
+            <div class="label">Instant:</div>
+            <meter high="0.25" max="1" value="0"></meter>
+            <div class="value"></div>
+        </div>
+        <div id="slow">
+            <div class="label">Slow:</div>
+            <meter high="0.25" max="1" value="0"></meter>
+            <div class="value"></div>
+        </div>
+        <div id="clip">
+            <div class="label">Clip:</div>
+            <meter max="1" value="0"></meter>
+            <div class="value"></div>
+        </div>
+    </div>
+
+    <div>
+        <button type="button" id="startButton">Start</button>
+        <button type="button" id="stopButton" disabled>Stop</button>
+    <div>
+
     <div class="row srs_players">
         <div class="span4 hide" id="publisher">
             <label></label>
@@ -59,6 +82,11 @@
         </div>
     </div>
 </div>
+
+<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+<script type="text/javascript" src="js/soundmeter.js"></script>
+<script type="text/javascript" src="js/main.js"></script>
+
 <script type="text/javascript">
     var sig = null;
     var publisher = null;
@@ -76,6 +104,7 @@
             var room = $('#txt_room').val();
             var userId = parseInt($('#txt_userId').val());
             var token = $('#txt_token').val();
+            let timeoutId = null;
 
             // Connect to signaling first.
             if (sig) {
@@ -90,6 +119,19 @@
                     if (msg.peer && msg.peer.publishing && msg.peer.userId !== userId) {
                         startPlay(host, room, msg.peer);
                     }
+                }
+
+                if (msg.event === 'speak') {
+                    if (null !== timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+
+                    console.log("SPEAK: " + msg.userId + ', Level: ' + msg.level);
+                    // $('#level-' + msg.userId).html(msg.level);
+                    $('#level-' + msg.userId).parent().parent().find('video').css('border', '4px solid green');
+                    timeoutId = setTimeout(function () {
+                        $('#level-' + msg.userId).parent().parent().find('video').css('border', '');
+                    }, 500);
                 }
 
                 // Remove dead players.
@@ -154,7 +196,8 @@
             $('#rtc_media_publisher').prop('srcObject', publisher.stream);
 
             return publisher.publish(url).then(function(session){
-                $('#self').html('<b>Self</b>: ' + url);
+                let htmlAudioLevel = '<div id="level-' + userId + '"></div>';
+                $('#self').html('<b>Self</b>: ' + htmlAudioLevel + url);
             }).catch(function (reason) {
                 publisher.close();
                 $('#rtc_media_publisher').hide();
@@ -218,7 +261,8 @@
                     'cameraType: ' + peer.cameraType + '<br>' +
                     'batteryLife: ' + peer.batteryLife + '<br>';
 
-                ui.children('#peer').html('Peer: ' + url + html);
+                let htmlAudioLevel = '<div id="level-' + peer.userId + '"></div>';
+                ui.children('#peer').html('Peer: ' + htmlAudioLevel + url + html);
                 video.prop('muted', false);
             }).catch(function (reason) {
                 player.close();
@@ -244,4 +288,23 @@
             window.addEventListener("load", function(){ startDemo(); });
         }
     });
+
+    async function speak(level) {
+
+        if (sig === null) {
+            return;
+        }
+
+        let u = parseInt($('#txt_userId').val());
+        let r = $('#txt_room').val();
+
+        level = parseFloat(level);
+
+        if (level >= 0.01) {
+            let data = {action: 'speak', room: r, userId: u, level: level};
+
+            console.log(data);
+            await sig.send(data);
+        }
+    }
 </script>
