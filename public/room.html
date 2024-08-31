@@ -7,6 +7,9 @@
         body{
             padding-top: 30px;
         }
+        video {
+            border: 4px solid #fff;
+        }
     </style>
     <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css"/>
     <script type="text/javascript" src="js/jquery-1.12.2.min.js"></script>
@@ -19,10 +22,9 @@
 <div class="navbar navbar-fixed-top">
     <div class="navbar-inner">
         <div class="container">
-            <a class="brand" href="https://github.com/ossrs/srs">SRS</a>
+            <a class="brand" href="/">SRS</a>
             <div class="nav-collapse collapse">
                 <ul class="nav srs_nav">
-                    <li><a href="one2one.html">One to One</a></li>
                     <li class="active"><a href="room.html">Video Room</a></li>
                 </ul>
             </div>
@@ -83,7 +85,6 @@
     </div>
 </div>
 
-<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
 <script type="text/javascript" src="js/soundmeter.js"></script>
 <script type="text/javascript" src="js/main.js"></script>
 
@@ -131,7 +132,7 @@
                     $('#level-' + msg.userId).parent().parent().find('video').css('border', '4px solid green');
                     timeoutId = setTimeout(function () {
                         $('#level-' + msg.userId).parent().parent().find('video').css('border', '');
-                    }, 500);
+                    }, 600);
                 }
 
                 // Remove dead players.
@@ -250,6 +251,7 @@
                                 'userId: ' + peer.userId + '<br>' +
                                 'firstName: ' + peer.firstName + '<br>' +
                                 'lastName: ' + peer.lastName + '<br>' +
+                                'sex: ' + peer.sex + '<br>' +
                                 'status: ' + peer.status + '<br>' +
                             '</td>' +
                         '</tr>' +
